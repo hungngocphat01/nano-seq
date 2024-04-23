@@ -11,4 +11,5 @@ Other details TBA.
   - [ ] Greedy decoding
   - [ ] Beam search
 - [ ] NMT++
+  - [ ] Memory optimization (lazy-loading dataset)
   - [ ] KV caching
