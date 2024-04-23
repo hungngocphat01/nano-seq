@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "nano-seq"
+version = "0.1.0"
+description = ""
+authors = ["Hung Ngoc Phat <hungngocphat01@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.2.2"
+tqdm = "^4.66.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
