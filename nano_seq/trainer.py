@@ -22,4 +22,4 @@ def train(
         train_func(train_iter, model, optimizer, criterion, logger)
 
         model.eval()
-        valid_func(valid_iter, model, logger)
+        valid_func(valid_iter, model, criterion, logger)
