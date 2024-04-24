@@ -56,3 +56,7 @@ class ClassificationDataset(Dataset):
             tgt_lines = [line.strip() for line in tgt_f.readlines()]
 
         return cls(src_lines, tgt_lines, dictionary)
+
+__all__ = [
+    "ClassificationDataset"
+]

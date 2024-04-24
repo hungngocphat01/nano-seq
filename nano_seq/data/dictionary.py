@@ -84,3 +84,7 @@ class Dictionary:
 
         d.initialize(tok2id)
         return d
+
+__all__ = [
+    "Dictionary"
+]
