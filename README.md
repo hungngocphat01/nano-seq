@@ -5,8 +5,8 @@ Other details TBA.
 - [x] Transformer implementation
 - [x] Raw text data loading/collating logic
 - [x] Proxy task to evaluate the implementation (sentence classification)
-- [ ] Common logic between different tasks (training loop, config management, etc.)
-- [ ] NMT
+- [x] Common logic between different tasks (training loop, config management, etc.)
+- [x] NMT
   - [ ] Parallel (bilingual) dataset implementation
   - [ ] Greedy decoding
   - [ ] Beam search
