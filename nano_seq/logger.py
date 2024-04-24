@@ -20,7 +20,7 @@ class Logger(ABC):
         pass
 
     @abstractmethod
-    def write_eval(self, **kwargs):
+    def write_eval(self, batch_idx: int, **kwargs):
         pass
 
 
@@ -42,11 +42,10 @@ class SimpleLogger(Logger):
         self.train_metrics[value] = defaultdict(lambda: [first_value])
         self.eval_metrics[value] = defaultdict(lambda: [first_value])
 
-    def write_train(self, batch_idx: int, **kwargs):
+    def _write(self, container, batch_idx, **kwargs):
         moving_avg = {}
-
         for name, value in kwargs.items():
-            metric_arr = self.train_metrics[self.epoch][name]
+            metric_arr = container[self.epoch][name]
             avg_value = (metric_arr[-1]["value"] * batch_idx + value) / (batch_idx + 1)
             moving_avg[name] = avg_value
             metric_arr.append(
@@ -55,20 +54,22 @@ class SimpleLogger(Logger):
                     "value": avg_value,
                 }
             )
+        return moving_avg
+
+    def write_train(self, batch_idx: int, **kwargs):
+        moving_avg = self._write(self.train_metrics, batch_idx, **kwargs)
         self.step += 1
 
         log_str = "Epoch {} | Step {} ".format(self.epoch, self.step)
         for name, value in moving_avg.items():
             log_str += "| {}: {} ".format(name, value)
 
-        print(log_str)
+        return moving_avg
 
-    def write_eval(self, **kwargs):
-        for name, value in kwargs.items():
-            self.eval_metrics[self.epoch][name].append({"step": self.step, "value": value})
-
+    def write_eval(self, batch_idx, **kwargs):
+        moving_avg = self._write(self.train_metrics, batch_idx, **kwargs)
         log_str = "Validation | Epoch {} | Step {} ".format(self.epoch, self.step)
-        for name, value in kwargs.items():
+        for name, value in moving_avg.items():
             log_str += "| {}: {} ".format(name, value)
 
-        print(log_str)
+        return moving_avg
