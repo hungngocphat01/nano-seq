@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import functools
 import os
 
@@ -50,7 +51,10 @@ class ClassificationTask(BaseTask):
             return torch.max(y).item()
 
         def count_label(iterable):
-            return int(functools.reduce(lambda x, y: max(x, max_label(y)), iter(iterable)))
+            m = -1
+            for batch in iter(iterable):
+                m = max(m, max_label(batch))
+            return int(m + 1)
 
         return count_label(train_iter), count_label(valid_iter)
 
@@ -75,8 +79,7 @@ class ClassificationTask(BaseTask):
     def train_step(
         self, train_loader, model: EncoderClassificationModel, optimizer: Optimizer, criterion, logger: Logger
     ):
-        model.train()
-        for batch_idx, data in iter(train_loader):
+        for batch_idx, data in enumerate(iter(train_loader)):
             x, y = data
 
             optimizer.zero_grad()
@@ -84,24 +87,36 @@ class ClassificationTask(BaseTask):
             logits, y_hat = model(x, enc_mask)
             loss = criterion(logits, y)
             loss.backward()
+            optimizer.step()
 
             batch_acc = accuracy(y, y_hat.detach())
             logger.write_train(batch_idx, loss=loss.item(), accuracy=batch_acc)
 
-    def eval_step(self, valid_iter, model: EncoderClassificationModel, logger: Logger):
-        model.eval()
-
-        sum_accuracy = 0
-
-        for _, data in iter(valid_iter):
+    def eval_step(self, valid_iter, model: EncoderClassificationModel, criterion, logger: Logger):
+        for batch_idx, data in enumerate(iter(valid_iter)):
             x, y = data
 
             with torch.no_grad():
                 enc_mask = get_encoder_mask(x, model.pad_idx)
-                _, y_hat = model(x, enc_mask)
-            sum_accuracy += accuracy(y, y_hat)
+                logits, y_hat = model(x, enc_mask)
+                loss = criterion(logits, y)
 
-        logger.write_eval(accuracy=sum_accuracy / len(valid_iter))
+            batch_acc = accuracy(y, y_hat)
+
+            logger.write_eval(batch_idx, loss=loss.item(), accuracy=batch_acc)
 
     def inference_step(self, infer_iter, model):
         pass
+
+
+@dataclass
+class Config:
+    embed_dims: int
+    batch_size: int
+    num_heads: int
+    encoder_layers: int
+    encoder_dropout: float
+    spm_dict_path: str
+    left_pad_src: bool
+    train_path: str
+    valid_path: str
