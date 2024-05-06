@@ -6,7 +6,7 @@ import torch
 from torch.optim import Optimizer
 
 from nano_seq.data import ClassificationCollator, ClassificationDataset, Dictionary
-from nano_seq.data.utils import get_encoder_mask
+from nano_seq.data.utils import get_padding_mask
 from nano_seq.logger import Logger
 from nano_seq.model.classification import EncoderClassificationModel
 from nano_seq.task.base import BaseTask
@@ -83,7 +83,7 @@ class ClassificationTask(BaseTask):
             x, y = data
 
             optimizer.zero_grad()
-            enc_mask = get_encoder_mask(x, model.pad_idx)
+            enc_mask = get_padding_mask(x, model.pad_idx)
             logits, y_hat = model(x, enc_mask)
             loss = criterion(logits, y)
             loss.backward()
@@ -97,7 +97,7 @@ class ClassificationTask(BaseTask):
             x, y = data
 
             with torch.no_grad():
-                enc_mask = get_encoder_mask(x, model.pad_idx)
+                enc_mask = get_padding_mask(x, model.pad_idx)
                 logits, y_hat = model(x, enc_mask)
                 loss = criterion(logits, y)
 

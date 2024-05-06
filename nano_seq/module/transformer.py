@@ -1,7 +1,11 @@
 import math
+from optparse import Option
+from typing import Optional
 import torch
 from torch import nn
 from torch.nn import functional as F
+
+from nano_seq.data.const import PAD
 
 
 class MultiheadAttention(nn.Module):
@@ -220,10 +224,11 @@ class TransformerEncoder(nn.Module):
         vocab_size: int,
         dropout: float = 0.1,
         max_len=5000,
-        padding_idx=0,
+        padding_idx=PAD,
+        embedding: Optional[TransformerEmbedding] = None
     ):
         super().__init__()
-        self.emb = TransformerEmbedding(d_model, vocab_size, max_len, padding_idx)
+        self.emb = embedding or TransformerEmbedding(d_model, vocab_size, max_len, padding_idx)
         self.layers = nn.ModuleList([EncoderLayer(d_model, n_heads) for _ in range(layers)])
         self.dropout = nn.Dropout(p=dropout)
 
@@ -251,10 +256,11 @@ class TransformerDecoder(nn.Module):
         vocab_size: int,
         dropout: float = 0.1,
         max_len=5000,
-        padding_idx=-1,
+        padding_idx=PAD,
+        embedding: Optional[TransformerEmbedding] = None
     ):
         super().__init__()
-        self.emb = TransformerEmbedding(d_model, vocab_size, max_len, padding_idx)
+        self.emb = embedding or TransformerEmbedding(d_model, vocab_size, max_len, padding_idx)
         self.layers = nn.ModuleList([DecoderLayer(d_model, n_heads) for _ in range(layers)])
         self.dropout = nn.Dropout(p=dropout)
 
