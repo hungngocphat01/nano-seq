@@ -1,6 +1,11 @@
-from torch.utils.data import Dataset
+from dataclasses import dataclass
 
+import torch
+from torch.utils.data import Dataset
 from tqdm import tqdm
+
+from nano_seq.data.base import NetInput
+
 from .dictionary import Dictionary
 
 
@@ -57,6 +62,14 @@ class ClassificationDataset(Dataset):
 
         return cls(src_lines, tgt_lines, dictionary)
 
+
+@dataclass
+class ClassificationNetInput(NetInput):
+    x: torch.Tensor
+    mask: torch.Tensor
+
+
 __all__ = [
-    "ClassificationDataset"
+    "ClassificationDataset",
+    "ClassificationNetInput"
 ]
