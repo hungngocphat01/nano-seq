@@ -59,17 +59,30 @@ class SimpleLogger(Logger):
     def write_train(self, batch_idx: int, **kwargs):
         moving_avg = self._write(self.train_metrics, batch_idx, **kwargs)
         self.step += 1
-
-        log_str = "Epoch {} | Step {} ".format(self.epoch, self.step)
-        for name, value in moving_avg.items():
-            log_str += "| {}: {} ".format(name, value)
-
         return moving_avg
 
     def write_eval(self, batch_idx, **kwargs):
         moving_avg = self._write(self.train_metrics, batch_idx, **kwargs)
-        log_str = "Validation | Epoch {} | Step {} ".format(self.epoch, self.step)
-        for name, value in moving_avg.items():
-            log_str += "| {}: {} ".format(name, value)
-
         return moving_avg
+
+
+class PrintLogger(SimpleLogger):
+    def write_train(self, batch_idx: int, **kwargs):
+        ma = super().write_train(batch_idx, **kwargs)
+
+        log_str = "Epoch {} | Step {} ".format(self.epoch, self.step)
+        for name, value in ma.items():
+            log_str += "| {}: {} ".format(name, value)
+        print(log_str)
+
+        return ma
+
+    def write_eval(self, batch_idx, **kwargs):
+        ma = super().write_eval(batch_idx, **kwargs)
+
+        log_str = "Validation | Epoch {} | Step {} ".format(self.epoch, self.step)
+        for name, value in ma.items():
+            log_str += "| {}: {} ".format(name, value)
+        print(log_str)
+
+        return ma
