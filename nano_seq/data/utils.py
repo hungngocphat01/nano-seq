@@ -1,9 +1,8 @@
-from numpy import pad
 import torch
 from .const import PAD
 
 
-def pad_sequence(seq: list[int], pad_idx: int, max_len: int, pad="left"):
+def pad_sequence(seq: list[int], pad_idx: int, max_len: int, pad="right"):
     """
     Create padding for a single sequence sample
 
@@ -47,7 +46,7 @@ def get_padding_mask(x: torch.Tensor, pad_idx=PAD):
     return (x != pad_idx).unsqueeze(1).unsqueeze(1).long()
 
 
-def get_future_mask(x: torch.Tensor, padding = "left"):
+def get_future_mask(x: torch.Tensor, padding = "right"):
     """
     Args
     ----
@@ -69,7 +68,7 @@ def get_future_mask(x: torch.Tensor, padding = "left"):
     return mask.unsqueeze(0).unsqueeze(0).long()
 
 
-def get_decoder_mask(x: torch.Tensor, padding = "left", pad_idx=PAD):
+def get_decoder_mask(x: torch.Tensor, padding = "right", pad_idx=PAD):
     """
     Args
     ----

@@ -3,7 +3,7 @@ import torch
 from .dataset import ClassificationDataset
 from .utils import pad_sequence
 
-def collate_batch(data: list[list[int]], eos_idx: int, sos_idx: int, pad_idx: int, pad="left"):
+def collate_batch(data: list[list[int]], eos_idx: int, sos_idx: int, pad_idx: int, pad="right"):
     """
     Create padding for a batch
 
@@ -44,7 +44,7 @@ def collate_batch(data: list[list[int]], eos_idx: int, sos_idx: int, pad_idx: in
 
 
 class ClassificationCollator(Iterable):
-    def __init__(self, dataset: ClassificationDataset, batch_size: int, padding="left"):
+    def __init__(self, dataset: ClassificationDataset, batch_size: int, padding="right"):
         self.i = 0
         self.bsz = batch_size
         self.dataset = dataset
