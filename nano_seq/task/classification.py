@@ -1,26 +1,38 @@
-from dataclasses import dataclass
-import functools
+from dataclasses import dataclass, field
 import os
 
 import torch
-from torch.optim import Optimizer
 
-from nano_seq.data import ClassificationCollator, ClassificationDataset, Dictionary
+from nano_seq.data import ClassificationCollator, ClassificationDataset, Dictionary, ClassificationNetInput
+from nano_seq.data.const import PAD
 from nano_seq.data.utils import get_padding_mask
-from nano_seq.logger import Logger
 from nano_seq.model.classification import EncoderClassificationModel
 from nano_seq.task.base import BaseTask
 from nano_seq.utils.metrics import accuracy
 
+@dataclass
+class ClassificationConfig:
+    embed_dims: int
+    num_heads: int
+    encoder_layers: int
+    encoder_dropout: float
+
+    train_path: str
+    valid_path: str
+    spm_dict_path: str
+    batch_size: int
+    left_pad_src: bool = field(default=False)
+    pad_idx: int = field(default=PAD)
+
 
 class ClassificationTask(BaseTask):
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, cfg: ClassificationConfig):
+        self.cfg = cfg
 
     def prepare(self):
         # Load dictionary and data
-        args = self.args
-        dictionary = Dictionary.from_spm(self.args.spm_dict_path)
+        cfg = self.cfg
+        dictionary = Dictionary.from_spm(self.cfg.spm_dict_path)
         train_iter, valid_iter = self._load_data(dictionary)
         clas_train, clas_valid = self._infer_n_class(train_iter, valid_iter)
 
@@ -33,10 +45,10 @@ class ClassificationTask(BaseTask):
         # Create model
         model = EncoderClassificationModel(
             clas_train,
-            args.embed_dims,
-            args.num_heads,
-            args.encoder_layers,
-            args.encoder_dropout,
+            cfg.embed_dims,
+            cfg.num_heads,
+            cfg.encoder_layers,
+            cfg.encoder_dropout,
             len(dictionary),
             dictionary.pad,
         )
@@ -59,64 +71,74 @@ class ClassificationTask(BaseTask):
         return count_label(train_iter), count_label(valid_iter)
 
     def _load_data(self, dictionary: Dictionary):
-        args = self.args
+        cfg = self.cfg
         train_dataset = ClassificationDataset.from_text_file(
-            os.path.join(args.train_path, "src.txt"), os.path.join(args.train_path, "tgt.txt"), dictionary
+            os.path.join(cfg.train_path, "src.txt"), os.path.join(cfg.train_path, "tgt.txt"), dictionary
         )
         valid_dataset = ClassificationDataset.from_text_file(
-            os.path.join(args.valid_path, "src.txt"), os.path.join(args.valid_path, "tgt.txt"), dictionary
+            os.path.join(cfg.valid_path, "src.txt"), os.path.join(cfg.valid_path, "tgt.txt"), dictionary
         )
 
         train_iter = ClassificationCollator(
-            train_dataset, args.batch_size, padding="left" if args.left_pad_src is True else "right"
+            train_dataset, cfg.batch_size, padding="left" if cfg.left_pad_src is True else "right"
         )
         valid_iter = ClassificationCollator(
-            valid_dataset, args.batch_size, padding="left" if args.left_pad_src is True else "right"
+            valid_dataset, cfg.batch_size, padding="left" if cfg.left_pad_src is True else "right"
         )
 
         return train_iter, valid_iter
 
+    def get_net_input(self, sample) -> ClassificationNetInput:
+        x, _ = sample
+        return ClassificationNetInput(x=x, mask=get_padding_mask(x, self.cfg.pad_idx))
+
     def train_step(
-        self, train_loader, model: EncoderClassificationModel, optimizer: Optimizer, criterion, logger: Logger
-    ):
-        for batch_idx, data in enumerate(iter(train_loader)):
-            x, y = data
+        self,
+        net_input: ClassificationNetInput,
+        label: torch.Tensor,
+        model: EncoderClassificationModel,
+        optimizer: torch.optim.Optimizer,
+        criterion,
+    ) -> dict:
+        """
+        Function to call for one training batch
 
-            optimizer.zero_grad()
-            enc_mask = get_padding_mask(x, model.pad_idx)
-            logits, y_hat = model(x, enc_mask)
-            loss = criterion(logits, y)
-            loss.backward()
-            optimizer.step()
+        Args
+        ----
+        net_input:
+            neural network input, defined by batch iterator
+        label:
+            1d tensor of shape [bsz]
+        model:
+            the neural network module
 
-            batch_acc = accuracy(y, y_hat.detach())
-            logger.write_train(batch_idx, loss=loss.item(), accuracy=batch_acc)
+        Returns
+        -------
+        dict
+            logging metrics
+        """
+        model.train()
 
-    def eval_step(self, valid_iter, model: EncoderClassificationModel, criterion, logger: Logger):
-        for batch_idx, data in enumerate(iter(valid_iter)):
-            x, y = data
+        optimizer.zero_grad()
+        logits, y_hat = model(**net_input.asdict())
+        loss = criterion(logits, label)
+        loss.backward()
 
-            with torch.no_grad():
-                enc_mask = get_padding_mask(x, model.pad_idx)
-                logits, y_hat = model(x, enc_mask)
-                loss = criterion(logits, y)
+        batch_acc = accuracy(label, y_hat.detach())
 
-            batch_acc = accuracy(y, y_hat)
+        return {"loss": loss.detach().item(), "accuracy": batch_acc}
 
-            logger.write_eval(batch_idx, loss=loss.item(), accuracy=batch_acc)
+    def eval_step(
+        self, net_input: ClassificationNetInput, label: torch.Tensor, model: EncoderClassificationModel, criterion
+    ) -> dict:
+
+        with torch.no_grad():
+            logits, y_hat = model(**net_input.asdict())
+            loss = criterion(logits, label)
+
+        batch_acc = accuracy(label, y_hat)
+
+        return {"loss": loss.item(), "accuracy": batch_acc}
 
     def inference_step(self, infer_iter, model):
         pass
-
-
-@dataclass
-class Config:
-    embed_dims: int
-    batch_size: int
-    num_heads: int
-    encoder_layers: int
-    encoder_dropout: float
-    spm_dict_path: str
-    left_pad_src: bool
-    train_path: str
-    valid_path: str
