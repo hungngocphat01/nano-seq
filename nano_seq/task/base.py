@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import torch
 
-from nano_seq.data.dataset import NetInput
+from nano_seq.model.base import NetInput
 
 
 class BaseTask(ABC):
@@ -17,14 +17,14 @@ class BaseTask(ABC):
         """
 
     @abstractmethod
-    def get_net_input(self, sample) -> NetInput:
+    def get_net_input(self, batch) -> NetInput:
         """
         Construct neural network input from data returned by collator
 
         Args
         ----
-        sample: any
-            data sample returned from collator of the task
+        batch: any
+            data batch returned from collator of the task
 
         Return
         ------

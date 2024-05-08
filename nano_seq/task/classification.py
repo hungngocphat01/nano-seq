@@ -3,10 +3,10 @@ import os
 
 import torch
 
-from nano_seq.data import ClassificationCollator, ClassificationDataset, Dictionary, ClassificationNetInput
+from nano_seq.data import ClassificationCollator, ClassificationDataset, Dictionary
 from nano_seq.data.const import PAD
 from nano_seq.data.utils import get_padding_mask
-from nano_seq.model.classification import EncoderClassificationModel
+from nano_seq.model.classification import EncoderClassificationModel, ClassificationNetInput
 from nano_seq.task.base import BaseTask
 from nano_seq.utils.metrics import accuracy
 

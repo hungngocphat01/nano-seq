@@ -1,7 +1,9 @@
+from dataclasses import dataclass
 from torch import Tensor, nn
 from torch.nn import functional as F
 
 from nano_seq.data.const import PAD
+from nano_seq.model.base import NetInput
 from nano_seq.module.transformer import TransformerEncoder
 
 
@@ -51,3 +53,10 @@ class EncoderClassificationModel(nn.Module):
         y_hat_class = y_hat.argmax(dim=1)
 
         return x, y_hat_class
+
+
+
+@dataclass
+class ClassificationNetInput(NetInput):
+    x: Tensor
+    mask: Tensor
