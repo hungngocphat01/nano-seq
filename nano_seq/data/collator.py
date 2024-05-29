@@ -182,6 +182,7 @@ class LanguagePairCollator(BaseCollator):
                 prepend_sos=True,
             )
         )
+        batched_x_dec = batched_x_dec[:, :-1]
 
         return (batched_x, batched_x_dec), batched_y
 
