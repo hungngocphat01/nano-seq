@@ -6,7 +6,7 @@ from .dataset import ClassificationDataset, LanguagePairDataset
 from .utils import pad_sequence
 
 
-def collate_batch(data: list[list[int]], eos: int, sos: int, pad: int, padding="right", append_sos=False):
+def collate_batch(data: list[list[int]], eos: int, sos: int, pad: int, padding="right", decoder_input=False):
     """
     Create padding for a batch
 
@@ -35,7 +35,8 @@ def collate_batch(data: list[list[int]], eos: int, sos: int, pad: int, padding="
     max_len = 0
     processed_data = []
     for sample in data:
-        processed_sample = [*sample, eos] if not append_sos else [sos, *sample, eos]
+        # if decoder input: shift right with sos and remove last token
+        processed_sample = [*sample, eos] if not decoder_input else [sos, *sample[:-1], eos]
 
         processed_data.append(processed_sample)
         max_len = max(max_len, len(processed_sample))
@@ -172,11 +173,11 @@ class LanguagePairCollator(BaseCollator):
                 sos=self.tgt.sos,
                 pad=self.tgt.pad,
                 padding=self.tgt.padding,
-                append_sos=True,
+                decoder_input=True,
             )
         )
 
-        return batched_x, batched_x_dec, batched_y
+        return (batched_x, batched_x_dec), batched_y
 
 
 __all__ = ["ClassificationCollator", "LanguagePairCollator"]
