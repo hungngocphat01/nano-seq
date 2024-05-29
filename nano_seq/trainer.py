@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Optional
 import torch
 from torch import nn
 
@@ -12,6 +12,7 @@ class Trainer:
         train_iter: Iterable,
         eval_iter: Iterable,
         optimizer: torch.optim.Optimizer,
+        lr_scheduler: Optional[torch.optim.lr_scheduler.LRScheduler],
         criterion: nn.Module,
         task: BaseTask,
         model: torch.nn.Module,
@@ -20,6 +21,7 @@ class Trainer:
         self.train_iter = train_iter
         self.eval_iter = eval_iter
         self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
         self.criterion = criterion
         self.task = task
         self.model = model
@@ -32,6 +34,8 @@ class Trainer:
 
             logs = self.task.train_step(net_input, label, self.model, self.optimizer, self.criterion)
             self.optimizer.step()
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
 
             self.logger.write_train(batch_idx, **logs)
 
