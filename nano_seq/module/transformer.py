@@ -139,22 +139,26 @@ class TransformerEmbedding(nn.Module):
 
 
 class FeedforwardNet(nn.Module):
-    def __init__(self, in_dim: int, out_dim: int, activation=F.relu):
+    def __init__(self, d_model: int, project_dim: int, activation=F.relu):
         super().__init__()
-        self.linear = nn.Linear(in_dim, out_dim)
+        self.project_big = nn.Linear(d_model, project_dim)
+        self.project_back = nn.Linear(project_dim, d_model)
         self.activation = activation
 
     def forward(self, x):
-        return self.activation(self.linear(x))
+        x = self.project_big(x)
+        x = self.activation(x)
+        x = self.project_back(x)
+        return x
 
 
 class TransformerLayer(nn.Module):
-    def __init__(self, d_model: int, n_heads: int):
+    def __init__(self, d_model: int, n_heads: int, ffn_project_dims: int):
         super().__init__()
         self.d_model = d_model
         self.n_heads = n_heads
 
-        self.ffn = FeedforwardNet(d_model, d_model)
+        self.ffn = FeedforwardNet(d_model, ffn_project_dims)
         self.attention = MultiheadAttention(d_model, n_heads)
         self.layer_norm = nn.ModuleList([nn.LayerNorm(d_model), nn.LayerNorm(d_model)])
 
@@ -181,8 +185,8 @@ class EncoderLayer(TransformerLayer):
 
 
 class DecoderLayer(TransformerLayer):
-    def __init__(self, d_model: int, n_heads: int):
-        super().__init__(d_model, n_heads)
+    def __init__(self, d_model: int, n_heads: int, ffn_project_dims: int):
+        super().__init__(d_model, n_heads, ffn_project_dims)
 
         self.cross_attention = MultiheadAttention(d_model, n_heads)
         self.layer_norm.append(nn.LayerNorm(d_model))
@@ -220,6 +224,7 @@ class TransformerEncoder(nn.Module):
         self,
         d_model: int,
         n_heads: int,
+        ffn_project_dims: int,
         layers: int,
         vocab_size: int,
         dropout: float = 0.1,
@@ -229,7 +234,7 @@ class TransformerEncoder(nn.Module):
     ):
         super().__init__()
         self.emb = embedding or TransformerEmbedding(d_model, vocab_size, max_len, padding_idx)
-        self.layers = nn.ModuleList([EncoderLayer(d_model, n_heads) for _ in range(layers)])
+        self.layers = nn.ModuleList([EncoderLayer(d_model, n_heads, ffn_project_dims) for _ in range(layers)])
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, mask):
@@ -252,6 +257,7 @@ class TransformerDecoder(nn.Module):
         self,
         d_model: int,
         n_heads: int,
+        ffn_project_dims: int,
         layers: int,
         vocab_size: int,
         dropout: float = 0.1,
@@ -261,7 +267,7 @@ class TransformerDecoder(nn.Module):
     ):
         super().__init__()
         self.emb = embedding or TransformerEmbedding(d_model, vocab_size, max_len, padding_idx)
-        self.layers = nn.ModuleList([DecoderLayer(d_model, n_heads) for _ in range(layers)])
+        self.layers = nn.ModuleList([DecoderLayer(d_model, n_heads, ffn_project_dims) for _ in range(layers)])
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, x_enc, mask, mask_enc):

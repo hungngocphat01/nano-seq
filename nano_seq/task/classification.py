@@ -14,6 +14,7 @@ from nano_seq.utils.metrics import accuracy
 class ClassificationConfig:
     embed_dims: int
     num_heads: int
+    ffn_project_dims: int
     encoder_layers: int
     encoder_dropout: float
 
@@ -47,6 +48,7 @@ class ClassificationTask(BaseTask):
             clas_train,
             cfg.embed_dims,
             cfg.num_heads,
+            cfg.ffn_project_dims,
             cfg.encoder_layers,
             cfg.encoder_dropout,
             len(dictionary),
@@ -88,8 +90,8 @@ class ClassificationTask(BaseTask):
 
         return train_iter, valid_iter
 
-    def get_net_input(self, sample) -> ClassificationNetInput:
-        x, _ = sample
+    def get_net_input(self, batch) -> ClassificationNetInput:
+        x, _ = batch
         return ClassificationNetInput(x=x, mask=get_padding_mask(x, self.cfg.pad_idx))
 
     def train_step(

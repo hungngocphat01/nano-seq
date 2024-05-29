@@ -9,12 +9,22 @@ from nano_seq.module.transformer import TransformerEncoder
 
 class EncoderClassificationModel(nn.Module):
     def __init__(
-        self, n_class: int, d_model: int, n_heads: int, layers: int, dropout: float, vocab_size: int, pad_idx: int = PAD
+        self,
+        n_class: int,
+        d_model: int,
+        n_heads: int,
+        ffn_project_dims: int,
+        layers: int,
+        dropout: float,
+        vocab_size: int,
+        pad_idx: int = PAD,
     ):
         super().__init__()
         self.pad_idx = pad_idx
         self.n_class = n_class
-        self.encoder = TransformerEncoder(d_model, n_heads, layers, vocab_size, dropout=dropout, padding_idx=pad_idx)
+        self.encoder = TransformerEncoder(
+            d_model, n_heads, ffn_project_dims, layers, vocab_size, dropout=dropout, padding_idx=pad_idx
+        )
         self.linear = nn.Linear(d_model, n_class)
         self.softmax = nn.Softmax(dim=-1)
 
@@ -53,7 +63,6 @@ class EncoderClassificationModel(nn.Module):
         y_hat_class = y_hat.argmax(dim=1)
 
         return x, y_hat_class
-
 
 
 @dataclass

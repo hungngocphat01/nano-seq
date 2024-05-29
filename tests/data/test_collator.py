@@ -46,6 +46,6 @@ def non_pad_input():
 )
 def test_collate_right_pad(non_pad_input, prepend_sos, expected_output):
 
-    batch = collate_batch(non_pad_input, eos=E, sos=S, pad=P, padding="right", append_sos=prepend_sos)
+    batch = collate_batch(non_pad_input, eos=E, sos=S, pad=P, padding="right", decoder_input=prepend_sos)
 
     assert batch == expected_output
