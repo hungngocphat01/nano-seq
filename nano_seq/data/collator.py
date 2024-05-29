@@ -6,7 +6,9 @@ from .dataset import ClassificationDataset, LanguagePairDataset
 from .utils import pad_sequence
 
 
-def collate_batch(data: list[list[int]], eos: int, sos: int, pad: int, padding="right", decoder_input=False):
+def collate_batch(
+    data: list[list[int]], eos: int, sos: int, pad: int, padding="right", prepend_sos=False, append_eos=False
+):
     """
     Create padding for a batch
 
@@ -35,11 +37,13 @@ def collate_batch(data: list[list[int]], eos: int, sos: int, pad: int, padding="
     max_len = 0
     processed_data = []
     for sample in data:
-        # if decoder input: shift right with sos and remove last token
-        processed_sample = [*sample, eos] if not decoder_input else [sos, *sample[:-1], eos]
+        if prepend_sos:
+            sample = [sos] + sample
+        if append_eos:
+            sample = sample + [eos]
 
-        processed_data.append(processed_sample)
-        max_len = max(max_len, len(processed_sample))
+        processed_data.append(sample)
+        max_len = max(max_len, len(sample))
 
     # batch by max_len
     batched_data = []
@@ -162,7 +166,9 @@ class LanguagePairCollator(BaseCollator):
         )
 
         batched_y = torch.tensor(
-            collate_batch(y, eos=self.tgt.eos, sos=self.tgt.sos, pad=self.tgt.pad, padding=self.tgt.padding)
+            collate_batch(
+                y, eos=self.tgt.eos, sos=self.tgt.sos, pad=self.tgt.pad, padding=self.tgt.padding, append_eos=True
+            )
         )
 
         # Input to decoder (output shifted right by SOS)
@@ -173,7 +179,7 @@ class LanguagePairCollator(BaseCollator):
                 sos=self.tgt.sos,
                 pad=self.tgt.pad,
                 padding=self.tgt.padding,
-                decoder_input=True,
+                prepend_sos=True,
             )
         )
 
