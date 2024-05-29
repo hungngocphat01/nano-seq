@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import torch
 from torch import Tensor, nn
@@ -14,6 +14,7 @@ class TranslationModel(nn.Module):
         self,
         d_model: int,
         n_heads: int,
+        ffn_project_dims: int,
         enc_layers: int,
         dec_layers: int,
         enc_dropout: float,
@@ -25,6 +26,7 @@ class TranslationModel(nn.Module):
     ):
         super().__init__()
         self.pad_idx = pad_idx
+        self.out_ffn = nn.Linear(d_model, tgt_vocab_size)
 
         if shared_embedding:
             assert (
@@ -39,22 +41,35 @@ class TranslationModel(nn.Module):
             n_heads=n_heads,
             padding_idx=pad_idx,
             embedding=emb,
+            ffn_project_dims=ffn_project_dims
         )
 
         self.encoder = TransformerEncoder(**kwargs, layers=enc_layers, dropout=enc_dropout, vocab_size=src_vocab_size)
         self.decoder = TransformerDecoder(**kwargs, layers=dec_layers, dropout=dec_dropout, vocab_size=tgt_vocab_size)
 
-    def forward(self, x: torch.Tensor, x_dec: Optional[torch.Tensor], enc_mask: torch.Tensor, dec_mask: torch.Tensor):
-        h_encoder = self.encoder(x, enc_mask)
-        h_decoder = self.decoder(x_dec, h_encoder, enc_mask, dec_mask)
+    def out_project(self, x):
+        x = self.out_ffn(x)
+        # x = self.out_softmax(x)
+        return x
 
-        return h_decoder
+    def forward(self, x: torch.Tensor, x_dec: torch.Tensor, enc_mask: torch.Tensor, dec_mask: torch.Tensor):
+        """
+        Returns
+        -------
+        tensor of shape [bsz, max_len, vocab_size]
+        where the last dimension is raw logits
+        """
+        h_encoder = self.encoder(x, enc_mask)
+        h_decoder = self.decoder(x_dec, h_encoder, dec_mask, enc_mask)
+        output = self.out_project(h_decoder)
+        return output
 
     @classmethod
     def from_cfg(cls, cfg, src_vocab_size: int, tgt_vocab_size: int):
         return cls(
             d_model=cfg.embed_dims,
             n_heads=cfg.num_heads,
+            ffn_project_dims=cfg.ffn_project_dims,
             enc_layers=cfg.encoder_layers,
             dec_layers=cfg.decoder_layers,
             enc_dropout=cfg.encoder_dropout,
@@ -68,7 +83,7 @@ class TranslationModel(nn.Module):
 
 @dataclass
 class TranslationNetInput(NetInput):
-    x_enc: Tensor
+    x: Tensor
     x_dec: Tensor
     enc_mask: Tensor
     dec_mask: Tensor

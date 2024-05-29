@@ -1,6 +1,9 @@
 import os
 from dataclasses import dataclass, field
 
+import torch
+from torch.nn.modules import Module
+
 from nano_seq.data import Dictionary
 from nano_seq.data.collator import LanguagePairCollator
 from nano_seq.data.const import PAD
@@ -14,6 +17,7 @@ from nano_seq.task.base import BaseTask
 class TranslationConfig:
     embed_dims: int
     num_heads: int
+    ffn_project_dims: int
     encoder_layers: int
     encoder_dropout: float
     decoder_layers: int
@@ -73,10 +77,10 @@ class TranslationTask(BaseTask):
         return train_iter, valid_iter, model
 
     def get_net_input(self, batch) -> TranslationNetInput:
-        x_enc, x_dec, _ = batch
+        (x_enc, x_dec), _ = batch
 
         return TranslationNetInput(
-            x_enc=x_enc, x_dec=x_dec, enc_mask=get_padding_mask(x_enc), dec_mask=get_decoder_mask(x_dec)
+            x=x_enc, x_dec=x_dec, enc_mask=get_padding_mask(x_enc), dec_mask=get_decoder_mask(x_dec)
         )
 
     def _load_dataset(self, src_dict: Dictionary, tgt_dict: Dictionary):
@@ -89,3 +93,46 @@ class TranslationTask(BaseTask):
             )
 
         return load_collator_split(cfg.train_path), load_collator_split(cfg.valid_path)
+
+    def train_step(
+        self,
+        net_input: TranslationNetInput,
+        label: torch.Tensor,
+        model: TranslationModel,
+        optimizer: torch.optim.Optimizer,
+        criterion,
+    ) -> dict:
+        """
+        Function to call for one training batch
+
+        Args
+        ----
+        net_input:
+            neural network input, defined by batch iterator
+        label:
+            1d tensor of shape [bsz]
+        model:
+            the neural network module
+
+        Returns
+        -------
+        dict
+            logging metrics
+        """
+        model.train()
+
+        optimizer.zero_grad()
+        logits = model(**net_input.asdict())
+        loss = criterion(logits, label)
+        loss.backward()
+
+        return {"loss": loss.detach().item()}
+
+    def eval_step(self, net_input: TranslationNetInput, label: torch.Tensor, model: Module, criterion: Module) -> dict:
+        model.eval()
+
+        with torch.no_grad():
+            logits = model(**net_input.asdict())
+            loss = criterion(logits, label)
+
+        return {"loss": loss.item()}
