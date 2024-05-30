@@ -2,7 +2,7 @@ from typing import Iterable, Optional
 import torch
 from torch import nn
 
-from nano_seq.logger import Logger
+from nano_seq.utils.logger import Logger
 from nano_seq.task.base import BaseTask
 
 
