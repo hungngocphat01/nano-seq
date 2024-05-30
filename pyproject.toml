@@ -12,6 +12,7 @@ tqdm = "^4.66.2"
 sentencepiece = "^0.2.0"
 requests = "^2.31.0"
 numpy = "^1.26.4"
+wandb = "^0.17.0"
 
 
 [tool.poetry.group.dev.dependencies]

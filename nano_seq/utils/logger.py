@@ -1,9 +1,10 @@
+
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Optional
 
 from tqdm import tqdm
-
+from wandb.wandb_run import Run
 
 class LogHandler(ABC):
     def __init__(self, name: str):
@@ -149,3 +150,26 @@ class StdoutLogHandler(LogHandler):
 
     def _fmt(self, split: str, epoch: int) -> dict:
         return {k: round(v, 4) for k, v in self.container._avg[split][epoch].items()}
+
+
+class WandBLogHandler(LogHandler):
+    def __init__(self, name: str, wandb_run: Run):
+        """
+        Handler for logging to Weights and Biases
+        
+        Args
+        ----
+        name: str
+            name of this logger
+        wandb_run: wandb.wandb_run.Run
+            a wandb Run object (e.g. created from calling `wandb.init()`)
+        """
+        super().__init__(name)
+        self.wandb = wandb_run
+
+    def write(self, split: str, step: int, epoch: int, data: dict):
+        data = {
+            split + "/" + name: value
+            for name, value in data.items()
+        }
+        self.wandb.log(data, step=step)
