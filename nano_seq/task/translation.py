@@ -11,6 +11,7 @@ from nano_seq.data.dataset import LanguagePairDataset
 from nano_seq.data.utils import get_decoder_mask, get_padding_mask
 from nano_seq.model.translation import TranslationModel, TranslationNetInput
 from nano_seq.task.base import BaseTask
+from nano_seq.utils.search import iterative_greedy_single
 
 
 @dataclass
@@ -128,7 +129,9 @@ class TranslationTask(BaseTask):
 
         return {"loss": loss.detach().item()}
 
-    def eval_step(self, net_input: TranslationNetInput, label: torch.Tensor, model: Module, criterion: Module) -> dict:
+    def eval_step(
+        self, net_input: TranslationNetInput, label: torch.Tensor, model: TranslationModel, criterion: Module
+    ) -> dict:
         model.eval()
 
         with torch.no_grad():
@@ -136,3 +139,17 @@ class TranslationTask(BaseTask):
             loss = criterion(logits, label)
 
         return {"loss": loss.item()}
+
+    def decode(self, model: TranslationModel, tgt_dict: Dictionary, batch):
+        results = []
+
+        net_input = self.get_net_input(batch)
+        h_encoder = model.encoder(**net_input.asdict())
+
+        for j in range(len(h_encoder)):
+            out_sent = iterative_greedy_single(
+                model, h_encoder[j, :].unsqueeze(0), net_input.enc_mask[j, :].unsqueeze(0), tgt_dict
+            )
+            results.append(out_sent)
+
+        return results
