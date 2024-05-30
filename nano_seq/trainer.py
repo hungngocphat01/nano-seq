@@ -1,7 +1,9 @@
+import math
 from typing import Iterable, Optional
 import torch
 from torch import nn
 
+from nano_seq.data.collator import BaseCollator
 from nano_seq.utils.logger import Logger
 from nano_seq.task.base import BaseTask
 
@@ -9,8 +11,8 @@ from nano_seq.task.base import BaseTask
 class Trainer:
     def __init__(
         self,
-        train_iter: Iterable,
-        eval_iter: Iterable,
+        train_iter: BaseCollator,
+        eval_iter: BaseCollator,
         optimizer: torch.optim.Optimizer,
         lr_scheduler: Optional[torch.optim.lr_scheduler.LRScheduler],
         criterion: nn.Module,
@@ -50,6 +52,16 @@ class Trainer:
             self.logger.write_eval(batch_idx, **logs)
 
     def start_train(self, num_epochs: int):
+        """
+        Start the training process for an additional `num_epochs`.
+
+        This function has a side effect: it will set the logger's stdout handler's `_step_epoch`
+        property to show the progress bar while training, if the stdout handler is enabled.
+        """
+        if "stdout" in self.logger.handlers:
+            batches_per_epoch = math.ceil(len(self.train_iter) / self.train_iter.bsz)
+            setattr(self.logger.handlers["stdout"], "_step_epoch", batches_per_epoch)
+
         for i in range(num_epochs):
             self.logger.epoch = i + 1
 
