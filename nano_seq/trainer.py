@@ -1,5 +1,6 @@
 import math
-from typing import Iterable, Optional
+import os
+from typing import Optional
 import torch
 from torch import nn
 
@@ -19,6 +20,7 @@ class Trainer:
         task: BaseTask,
         model: torch.nn.Module,
         logger: Logger,
+        checkpoint_path: Optional[str] = None,
     ):
         self.train_iter = train_iter
         self.eval_iter = eval_iter
@@ -28,6 +30,8 @@ class Trainer:
         self.task = task
         self.model = model
         self.logger = logger
+        self.chkpt_path = checkpoint_path
+        self._current_epoch = 0
 
     def train_epoch(self):
         for batch_idx, sample in enumerate(iter(self.train_iter)):
@@ -51,7 +55,7 @@ class Trainer:
 
             self.logger.write_eval(batch_idx, **logs)
 
-    def start_train(self, num_epochs: int):
+    def start_train(self, target_epoch: int, save_chkpt_every: Optional[int] = None):
         """
         Start the training process for an additional `num_epochs`.
 
@@ -62,8 +66,34 @@ class Trainer:
             batches_per_epoch = math.ceil(len(self.train_iter) / self.train_iter.bsz)
             setattr(self.logger.handlers["stdout"], "_step_epoch", batches_per_epoch)
 
-        for i in range(num_epochs):
+        for i in range(self._current_epoch, target_epoch):
             self.logger.epoch = i + 1
+            self._current_epoch = i
 
             self.train_epoch()
             self.eval_epoch()
+
+            if save_chkpt_every and self.chkpt_path and (i + 1) % save_chkpt_every == 0:
+                self.save_checkpoint(
+                    os.path.join(self.chkpt_path, f"epoch_{i + 1}.pt")
+                )
+
+    def get_state_dict(self):
+        state_dict = {
+            key: getattr(self, key).state_dict
+            for key in ["model", "optimizer", "lr_scheduler"]
+        }
+        state_dict.update({
+            "epoch": self._current_epoch
+        })
+
+    def load_state_dict(self, state_dict: dict):
+        for key in ["model", "optimizer", "lr_scheduler"]:
+            getattr(self, key).load_state_dict(state_dict.get(key))
+        self._current_epoch = int(state_dict.get("epoch") or 0)
+
+    def save_checkpoint(self, path: str):
+        torch.save(self.get_state_dict(), path)
+
+    def load_checkpoint(self, path: str):
+        self.load_state_dict(torch.load(path))
