@@ -87,3 +87,6 @@ class TranslationNetInput(NetInput):
     x_dec: Tensor
     enc_mask: Tensor
     dec_mask: Tensor
+
+    def num_input_toks(self) -> int:
+        return int(self.enc_mask.sum().detach().item())

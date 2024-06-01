@@ -7,6 +7,7 @@ from torch import nn
 from nano_seq.data.collator import BaseCollator
 from nano_seq.utils.logger import Logger
 from nano_seq.task.base import BaseTask
+from nano_seq.model.base import NetInput
 
 
 class Trainer:
@@ -39,6 +40,8 @@ class Trainer:
             net_input = self.task.get_net_input(sample)
 
             logs = self.task.train_step(net_input, label, self.model, self.optimizer, self.criterion)
+            logs.update(self.training_metrics(net_input))
+
             self.optimizer.step()
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
@@ -97,3 +100,13 @@ class Trainer:
 
     def load_checkpoint(self, path: str):
         self.load_state_dict(torch.load(path))
+
+    def training_metrics(self, net_input: NetInput):
+        lr = self.lr_scheduler.get_last_lr() if self.lr_scheduler is not None else 0
+        num_toks = net_input.num_input_toks()
+
+        return {
+            "lr": lr,
+            "tokens_per_batch": num_toks,
+            "vram": torch.cuda.mem_get_info()[0]
+        }
