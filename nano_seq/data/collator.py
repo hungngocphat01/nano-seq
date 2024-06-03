@@ -1,10 +1,14 @@
+import random
 from abc import abstractmethod
+from collections import namedtuple
 from argparse import Namespace
 from typing import Iterable
 import torch
 from .dataset import ClassificationDataset, LanguagePairDataset
 from .utils import pad_sequence
 
+DataSample = namedtuple("DataSample", "idx len")
+BatchItem = namedtuple("BatchItem", "idx num_samples num_toks")
 
 def collate_batch(
     data: list[list[int]], eos: int, sos: int, pad: int, padding="right", prepend_sos=False, append_eos=False
@@ -53,35 +57,65 @@ def collate_batch(
     return batched_data
 
 
+def _build_batches(num_tokens: list[DataSample], batch_size: int) -> list[BatchItem]:
+    batches = []
+
+    current_num_sents = 0
+    current_num_toks = 0
+    current_start = num_tokens[0].idx
+
+    for sample in num_tokens:
+        current_num_sents += 1
+        current_num_toks += sample.len
+
+        if current_num_toks > batch_size:
+            batches.append(
+                BatchItem(current_start, current_num_sents - 1, current_num_toks - sample.len)
+            )
+            current_num_sents = 1
+            current_start = sample.idx
+            current_num_toks = sample.len
+
+    # final batch, smaller than max batch size
+    if batches[-1].idx != current_start:
+        batches.append(
+            BatchItem(current_start, current_num_sents, current_num_toks)
+        )
+
+    return batches
+
+
 class BaseCollator(Iterable):
     def __init__(self, dataset, batch_size: int):
-        self.i = 0
         self.dataset = dataset
+        # number of source tokens per batch
         self.bsz = batch_size
+        self.batch_mappings: list[BatchItem] = _build_batches(
+            self._count_num_tokens(self.dataset),
+            batch_size
+        )
+        self.batch_mapping_iter = None
 
-    def __len__(self):
-        return len(self.dataset)
+    def shuffle(self):
+        random.shuffle(self.batch_mappings)
 
-    def range(self) -> tuple[int, int]:
-        """
-        The current batch range
-        """
-        return (self.i, min(self.i + self.bsz, len(self.dataset)))
+    def _count_num_tokens(self, dataset):
+        # tuple of index, length
+        return [DataSample(i, len(x)) for i, (x, _) in enumerate(dataset)]
 
     def __iter__(self):
-        self.i = 0
+        self.batch_mapping_iter = iter(self.batch_mappings)
         return self
 
+    def __len__(self):
+        return len(self.batch_mappings)
+
     def __next__(self):
-        n = len(self.dataset)
-        if self.i >= n:
-            raise StopIteration("Dataset has ended")
-
-        begin, end = self.range()
-        batch = self.dataset[begin:end]  # type: ignore
-        self.i += self.bsz
-
-        return self.collate(batch)  # type: ignore
+        assert self.batch_mapping_iter is not None, "Please call iter() on this collator before iterating it"
+        batch = next(self.batch_mapping_iter)
+        return self.collate(
+            self.dataset[batch.idx : batch.idx + batch.num_samples]
+        )    # type: ignore
 
     @abstractmethod
     def collate(self, batch):

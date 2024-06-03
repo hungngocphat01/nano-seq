@@ -27,6 +27,13 @@ class ClassificationDataset(Dataset):
             (dictionary.encode(x.split()), int(y)) for x, y in tqdm(zip(src_list, tgt_list), desc="Loading dataset")
         ]
 
+        self.data = list(
+            sorted(
+                filter(lambda x: len(x[0]) >= 2, self.data),
+                key=lambda x: len(x[0])
+            )
+        )
+
     def __getitem__(self, idx: int):
         return self.data[idx]
 
@@ -82,6 +89,13 @@ class LanguagePairDataset(Dataset):
             (src_dict.encode(src_sent.split()), tgt_dict.encode(tgt_sent.split()))
             for (src_sent, tgt_sent) in tqdm(zip(src_list, tgt_list), desc="Loading and encoding data")
         ]
+
+        self.data = list(
+            sorted(
+                filter(lambda x: len(x[0]) >= 2 and len(x[1]) >= 2, self.data),
+                key=lambda x: len(x[0])
+            )
+        )
 
     def __getitem__(self, index: int):
         return self.data[index]
