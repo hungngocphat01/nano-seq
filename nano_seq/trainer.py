@@ -68,8 +68,7 @@ class Trainer:
         property to show the progress bar while training, if the stdout handler is enabled.
         """
         if "stdout" in self.logger.handlers:
-            batches_per_epoch = math.ceil(len(self.train_iter) / self.train_iter.bsz)
-            setattr(self.logger.handlers["stdout"], "_step_epoch", batches_per_epoch)
+            setattr(self.logger.handlers["stdout"], "_step_epoch", len(self.train_iter))
 
         for i in range(self._current_epoch, target_epoch):
             self.logger.epoch = i + 1
@@ -110,5 +109,5 @@ class Trainer:
         return {
             "lr": lr,
             "tokens_per_batch": num_toks,
-            "vram": torch.cuda.mem_get_info()[0]
+            "free_vram_gb": round(torch.cuda.mem_get_info()[0] / 1e9, 4)
         }
