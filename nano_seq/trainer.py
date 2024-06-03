@@ -35,6 +35,8 @@ class Trainer:
         self._current_epoch = 0
 
     def train_epoch(self):
+        self.train_iter.shuffle()
+
         for batch_idx, sample in enumerate(iter(self.train_iter)):
             _, label = sample
             net_input = self.task.get_net_input(sample)
