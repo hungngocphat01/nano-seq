@@ -102,7 +102,7 @@ class Trainer:
         self.load_state_dict(torch.load(path))
 
     def training_metrics(self, net_input: NetInput):
-        lr = self.lr_scheduler.get_last_lr() if self.lr_scheduler is not None else 0
+        lr = self.lr_scheduler.get_last_lr()[0] if self.lr_scheduler is not None else 0
         num_toks = net_input.num_input_toks()
 
         return {
