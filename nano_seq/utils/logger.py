@@ -135,7 +135,7 @@ class StdoutLogHandler(LogHandler):
         self._step_epoch = 0
 
     def write(self, split: str, step: int, epoch: int, *args):
-        if self._step_epoch is None:
+        if self._step_epoch == 0:
             self._step_epoch = self.logger.training_info.get("step_epoch")
 
         if self.tqdm is None:
@@ -175,7 +175,7 @@ class WandBLogHandler(LogHandler):
         self.wandb = wandb_run
 
     def write(self, split: str, step: int, epoch: int, data: dict):
-        global_step = epoch * self.logger.training_info.get("step_epoch") + step
+        global_step = (epoch - 1) * self.logger.training_info.get("step_epoch") + step
         data = {
             split + "/" + name: value
             for name, value in data.items()
