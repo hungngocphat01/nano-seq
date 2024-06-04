@@ -42,13 +42,16 @@ class Trainer:
             net_input = self.task.get_net_input(sample)
 
             logs = self.task.train_step(net_input, label, self.model, self.optimizer, self.criterion)
-            logs.update(self.training_metrics(net_input))
+            
+            if batch_idx % 100 == 0:
+                logs.update(self.training_metrics(net_input))
 
             self.optimizer.step()
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
-            self.logger.write_train(batch_idx, **logs)
+            if batch_idx % 10 == 0:
+                self.logger.write_train(batch_idx, **logs)
 
     def eval_epoch(self):
         for batch_idx, sample in enumerate(iter(self.eval_iter)):
