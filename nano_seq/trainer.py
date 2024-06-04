@@ -64,14 +64,13 @@ class Trainer:
         """
         Start the training process for an additional `num_epochs`.
 
-        This function has a side effect: it will set the logger's stdout handler's `_step_epoch`
-        property to show the progress bar while training, if the stdout handler is enabled.
+        This function has a side effect: it will set the logger's training_info["step_epoch"]
+        property to enable calculation of global steps in some log handlers
         """
-        if "stdout" in self.logger.handlers:
-            setattr(self.logger.handlers["stdout"], "_step_epoch", len(self.train_iter))
+        self.logger.training_info["step_epoch"] = len(self.train_iter)
 
         for i in range(self._current_epoch, target_epoch):
-            self.logger.epoch = i + 1
+            self.logger.training_info["epoch"] = i + 1
             self._current_epoch = i
 
             self.train_epoch()
@@ -109,5 +108,5 @@ class Trainer:
         return {
             "lr": lr,
             "tokens_per_batch": num_toks,
-            "free_vram_gb": round(torch.cuda.mem_get_info()[0] / 1e9, 4)
+            "samples_per_batch": len(getattr(net_input, "x"))
         }

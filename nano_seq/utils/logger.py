@@ -49,11 +49,15 @@ class Logger:
 
         self.handlers = {handler.name: handler.set_logger(self) for handler in handlers} if handlers is not None else {}
 
-        self.epoch = 1
+        self.training_info = {
+            "bsz": 0,
+            "epoch": 1,
+            "step_epoch": 0
+        }
 
     def write(self, split: str, batch_idx: int, **kwargs):
         for handler in self.handlers.values():
-            handler.write(split, batch_idx, self.epoch, kwargs)
+            handler.write(split, batch_idx, self.training_info["epoch"], kwargs)
 
     def write_train(self, batch_idx: int, **kwargs):
         self.write("train", batch_idx, **kwargs)
@@ -131,6 +135,9 @@ class StdoutLogHandler(LogHandler):
         self._step_epoch = 0
 
     def write(self, split: str, step: int, epoch: int, *args):
+        if self._step_epoch is None:
+            self._step_epoch = self.logger.training_info.get("step_epoch")
+
         if self.tqdm is None:
             self.tqdm = tqdm(total=self._step_epoch, position=0)
 
@@ -168,8 +175,9 @@ class WandBLogHandler(LogHandler):
         self.wandb = wandb_run
 
     def write(self, split: str, step: int, epoch: int, data: dict):
+        global_step = epoch * self.logger.training_info.get("step_epoch") + step
         data = {
             split + "/" + name: value
             for name, value in data.items()
         }
-        self.wandb.log(data, step=step)
+        self.wandb.log(data, step=global_step)
