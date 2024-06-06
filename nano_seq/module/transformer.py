@@ -236,6 +236,7 @@ class TransformerEncoder(nn.Module):
         self.emb = embedding or TransformerEmbedding(d_model, vocab_size, max_len, padding_idx)
         self.layers = nn.ModuleList([EncoderLayer(d_model, n_heads, ffn_project_dims) for _ in range(layers)])
         self.dropout = nn.Dropout(p=dropout)
+        self.layer_norm = nn.LayerNorm(d_model)
 
     def forward(self, x, mask):
         """
@@ -248,7 +249,7 @@ class TransformerEncoder(nn.Module):
         """
         x = self.emb(x)
         for layer in self.layers:
-            x = x + self.dropout(layer(x, mask))
+            x = self.layer_norm(x + self.dropout(layer(x, mask)))
         return x
 
 
@@ -269,6 +270,7 @@ class TransformerDecoder(nn.Module):
         self.emb = embedding or TransformerEmbedding(d_model, vocab_size, max_len, padding_idx)
         self.layers = nn.ModuleList([DecoderLayer(d_model, n_heads, ffn_project_dims) for _ in range(layers)])
         self.dropout = nn.Dropout(p=dropout)
+        self.layer_norm = nn.LayerNorm(d_model)
 
     def forward(self, x, x_enc, mask, mask_enc):
         """
@@ -285,5 +287,5 @@ class TransformerDecoder(nn.Module):
         """
         x = self.emb(x)
         for layer in self.layers:
-            x = x + self.dropout(layer(x, x_enc, mask, mask_enc))
+            x = self.layer_norm(x + self.dropout(layer(x, x_enc, mask, mask_enc)))
         return x

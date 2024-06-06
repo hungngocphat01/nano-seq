@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Optional
 
-from git import Commit
 from tqdm import tqdm
 from wandb.wandb_run import Run
 
