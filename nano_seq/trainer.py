@@ -1,6 +1,8 @@
-import math
 import os
+import re
+import glob
 from typing import Optional
+
 import torch
 from torch import nn
 
@@ -42,7 +44,7 @@ class Trainer:
             net_input = self.task.get_net_input(sample)
 
             logs = self.task.train_step(net_input, label, self.model, self.optimizer, self.criterion)
-            
+
             if batch_idx % 100 == 0:
                 logs.update(self.training_metrics(net_input))
 
@@ -63,7 +65,7 @@ class Trainer:
 
             self.logger.write_eval(batch_idx, **logs)
 
-    def start_train(self, target_epoch: int, save_chkpt_every: Optional[int] = None):
+    def start_train(self, target_epoch: int, save_chkpt_every: Optional[int] = None, keep_last: Optional[int] = None):
         """
         Start the training process for an additional `num_epochs`.
 
@@ -80,18 +82,16 @@ class Trainer:
             self.eval_epoch()
 
             if save_chkpt_every and self.chkpt_path and (i + 1) % save_chkpt_every == 0:
-                self.save_checkpoint(
-                    os.path.join(self.chkpt_path, f"epoch_{i + 1}.pt")
-                )
+                self.save_checkpoint(os.path.join(self.chkpt_path, f"epoch_{i + 1}.pt"))
+
+                glob_pattern = os.path.join(self.chkpt_path, "epoch_*.pt")
+                regex = r"epoch_(\d+)\.pt"
+                if keep_last is not None and len(glob.glob(glob_pattern)) > keep_last:
+                    delete_old_checkpoint(glob_pattern, regex)
 
     def get_state_dict(self):
-        state_dict = {
-            key: getattr(self, key).state_dict()
-            for key in ["model", "optimizer", "lr_scheduler"]
-        }
-        state_dict.update({
-            "epoch": self._current_epoch
-        })
+        state_dict = {key: getattr(self, key).state_dict() for key in ["model", "optimizer", "lr_scheduler"]}
+        state_dict.update({"epoch": self._current_epoch})
 
     def load_state_dict(self, state_dict: dict):
         for key in ["model", "optimizer", "lr_scheduler"]:
@@ -108,8 +108,11 @@ class Trainer:
         lr = self.lr_scheduler.get_last_lr()[0] if self.lr_scheduler is not None else 0
         num_toks = net_input.num_input_toks()
 
-        return {
-            "lr": lr,
-            "tokens_per_batch": num_toks,
-            "samples_per_batch": len(getattr(net_input, "x"))
-        }
+        return {"lr": lr, "tokens_per_batch": num_toks, "samples_per_batch": len(getattr(net_input, "x"))}
+
+
+def delete_old_checkpoint(glob_pattern: str, num_extract_regex: str):
+    oldest_file = list(
+        sorted(glob.glob(glob_pattern), key=lambda x: re.search(num_extract_regex, x).group(1), reverse=True)
+    )[0]
+    os.remove(oldest_file)

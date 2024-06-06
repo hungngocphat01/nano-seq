@@ -174,10 +174,13 @@ class WandBLogHandler(LogHandler):
         super().__init__(name)
         self.wandb = wandb_run
 
-    def write(self, split: str, step: int, epoch: int, data: dict):
+    def write_train(self, step: int, epoch: int, data: dict):
         global_step = (epoch - 1) * self.logger.training_info.get("step_epoch") + step
         data = {
-            split + "/" + name: value
+            "train/" + name: value
             for name, value in data.items()
         }
         self.wandb.log(data, step=global_step)
+
+    def write_eval(self, step: int, epoch: int, data: dict):
+        pass
