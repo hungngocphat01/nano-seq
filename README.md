@@ -6,9 +6,9 @@ Other details TBA.
 - [x] Raw text data loading/collating logic
 - [x] Proxy task to evaluate the implementation (sentence classification)
 - [x] Common logic between different tasks (training loop, config management, etc.)
-- [ ] NMT
-  - [ ] Parallel (bilingual) dataset implementation
-  - [ ] Greedy decoding
+- [x] NMT
+  - [x] Parallel (bilingual) dataset implementation
+  - [x] Greedy decoding
   - [ ] Beam search
 - [ ] NMT++
   - [ ] Memory optimization (lazy-loading dataset)
