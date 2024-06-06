@@ -212,6 +212,6 @@ class WandBLogHandler(LogHandler):
         container = self.logger.log_container  # type: ignore
         self.wandb.log(
             {f"{mode}/avg_" + metric_name: value for metric_name, value in container._avg[mode][epoch].items()},
-            step=self.current_step,
+            step=self.current_step + 1 if mode == "eval" else self.current_step,
             commit=True
         )
