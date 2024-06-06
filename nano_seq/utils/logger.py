@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Optional
 
+from git import Commit
 from tqdm import tqdm
 from wandb.wandb_run import Run
 
@@ -213,4 +214,5 @@ class WandBLogHandler(LogHandler):
         self.wandb.log(
             {f"{mode}/avg_" + metric_name: value for metric_name, value in container._avg[mode][epoch].items()},
             step=self.current_step,
+            commit=True
         )
