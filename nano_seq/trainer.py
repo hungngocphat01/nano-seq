@@ -39,31 +39,33 @@ class Trainer:
     def train_epoch(self):
         self.train_iter.shuffle()
 
-        for batch_idx, sample in enumerate(iter(self.train_iter)):
-            _, label = sample
-            net_input = self.task.get_net_input(sample)
+        with self.logger.train():
+            for batch_idx, sample in enumerate(iter(self.train_iter)):
+                _, label = sample
+                net_input = self.task.get_net_input(sample)
 
-            logs = self.task.train_step(net_input, label, self.model, self.optimizer, self.criterion)
+                logs = self.task.train_step(net_input, label, self.model, self.optimizer, self.criterion)
 
-            if batch_idx % 100 == 0:
-                logs.update(self.training_metrics(net_input))
+                if batch_idx % 100 == 0:
+                    logs.update(self.training_metrics(net_input))
 
-            self.optimizer.step()
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
+                self.optimizer.step()
+                if self.lr_scheduler is not None:
+                    self.lr_scheduler.step()
 
-            if batch_idx % 10 == 0:
-                self.logger.write_train(batch_idx, **logs)
+                if batch_idx % 10 == 0:
+                    self.logger.write(batch_idx, **logs)
 
     def eval_epoch(self):
-        for batch_idx, sample in enumerate(iter(self.eval_iter)):
-            _, label = sample
-            net_input = self.task.get_net_input(sample)
+        with self.logger.eval():
+            for batch_idx, sample in enumerate(iter(self.eval_iter)):
+                _, label = sample
+                net_input = self.task.get_net_input(sample)
 
-            with torch.no_grad():
-                logs = self.task.eval_step(net_input, label, self.model, self.criterion)
+                with torch.no_grad():
+                    logs = self.task.eval_step(net_input, label, self.model, self.criterion)
 
-            self.logger.write_eval(batch_idx, **logs)
+                self.logger.write(batch_idx, **logs)
 
     def start_train(self, target_epoch: int, save_chkpt_every: Optional[int] = None, keep_last: Optional[int] = None):
         """
@@ -71,8 +73,8 @@ class Trainer:
 
         This function has a side effect: it will set the logger's training_info["step_epoch"]
         property to enable calculation of global steps in some log handlers
-        """
-        self.logger.training_info["step_epoch"] = len(self.train_iter)
+        """        
+        self.logger.set_steps_epoch(len(self.train_iter), len(self.eval_iter))
 
         for i in range(self._current_epoch, target_epoch):
             self.logger.training_info["epoch"] = i + 1
