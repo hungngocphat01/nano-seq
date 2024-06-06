@@ -94,6 +94,7 @@ class Trainer:
     def get_state_dict(self):
         state_dict = {key: getattr(self, key).state_dict() for key in ["model", "optimizer", "lr_scheduler"]}
         state_dict.update({"epoch": self._current_epoch})
+        return state_dict
 
     def load_state_dict(self, state_dict: dict):
         for key in ["model", "optimizer", "lr_scheduler"]:
