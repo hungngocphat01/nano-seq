@@ -1,4 +1,3 @@
-
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Optional
@@ -6,11 +5,12 @@ from typing import Optional
 from tqdm import tqdm
 from wandb.wandb_run import Run
 
+
 class LogHandler(ABC):
     def __init__(self, name: str):
         """
         Interface for handlers (sinks) of metrics
-        
+
         Args
         ----
         name: str
@@ -27,6 +27,12 @@ class LogHandler(ABC):
         self.logger = logger
         return self
 
+    def begin_epoch(self, mode: str, epoch: int):
+        pass
+
+    def end_epoch(self, mode: str, epoch: int):
+        pass
+
 
 class Logger:
     def __init__(self, handlers: Optional[list[LogHandler]] = None, stdout: bool = True):
@@ -41,29 +47,42 @@ class Logger:
             display a progress bar during training and evaluation
         """
         # default in-memory log sink
-        container_handler = ContainerLogHandler("container", ["train", "eval"])
+        self.log_container = LogContainer(["train", "eval"])
+
+        container_handler = ContainerLogHandler("container", self.log_container)
         handlers = [container_handler, *(handlers or [])]
 
         if stdout:
-            handlers.append(StdoutLogHandler("stdout", container_handler.container))
+            handlers.append(StdoutLogHandler("stdout", self.log_container))
 
         self.handlers = {handler.name: handler.set_logger(self) for handler in handlers} if handlers is not None else {}
 
-        self.training_info = {
-            "bsz": 0,
-            "epoch": 1,
-            "step_epoch": 0
-        }
+        self.training_info = {"bsz": 0, "epoch": 1, "step_epoch": 0, "step_epoch_eval": 0}
+        self._mode: str = "train"
 
-    def write(self, split: str, batch_idx: int, **kwargs):
+    def set_steps_epoch(self, train_steps: int, eval_steps: int):
+        self.training_info["step_epoch"] = train_steps
+        self.training_info["step_epoch_eval"] = eval_steps
+
+    def write(self, batch_idx: int, **kwargs):
         for handler in self.handlers.values():
-            handler.write(split, batch_idx, self.training_info["epoch"], kwargs)
+            handler.write(self._mode, batch_idx, self.training_info["epoch"], kwargs)
 
-    def write_train(self, batch_idx: int, **kwargs):
-        self.write("train", batch_idx, **kwargs)
+    def __enter__(self):
+        for handler in self.handlers.values():
+            handler.begin_epoch(self._mode, self.training_info["epoch"])
 
-    def write_eval(self, batch_idx: int, **kwargs):
-        self.write("eval", batch_idx, **kwargs)
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        for handler in self.handlers.values():
+            handler.end_epoch(self._mode, self.training_info["epoch"])
+
+    def train(self):
+        self._mode = "train"
+        return self
+
+    def eval(self):
+        self._mode = "eval"
+        return self
 
 
 class LogContainer:
@@ -105,12 +124,12 @@ class LogContainer:
 
 
 class ContainerLogHandler(LogHandler):
-    def __init__(self, name: str, splits: list[str]):
+    def __init__(self, name: str, container: LogContainer):
         """
         `LogHandler` interface adapter for `LogContainer`
         """
         super().__init__(name)
-        self.container = LogContainer(splits)
+        self.container = container
 
     def write(self, *args, **kwargs):
         self.container.write(*args, **kwargs)
@@ -133,10 +152,12 @@ class StdoutLogHandler(LogHandler):
         self.eval_tqdm = None
         self.container = container
         self._step_epoch = 0
+        self._step_epoch_eval = 0
 
     def write(self, split: str, step: int, epoch: int, *args):
         if self._step_epoch == 0:
             self._step_epoch = self.logger.training_info.get("step_epoch")
+            self._step_epoch_eval = self.logger.training_info.get("step_epoch_eval")
 
         if self.tqdm is None:
             self.tqdm = tqdm(total=self._step_epoch, position=0)
@@ -163,7 +184,7 @@ class WandBLogHandler(LogHandler):
     def __init__(self, name: str, wandb_run: Run):
         """
         Handler for logging to Weights and Biases
-        
+
         Args
         ----
         name: str
@@ -173,14 +194,23 @@ class WandBLogHandler(LogHandler):
         """
         super().__init__(name)
         self.wandb = wandb_run
+        self.current_step = 0
 
     def write_train(self, step: int, epoch: int, data: dict):
         global_step = (epoch - 1) * self.logger.training_info.get("step_epoch") + step
-        data = {
-            "train/" + name: value
-            for name, value in data.items()
-        }
+        self.current_step = max(global_step, self.current_step)
+
+        data = {"train/" + name: value for name, value in data.items()}
         self.wandb.log(data, step=global_step)
 
-    def write_eval(self, step: int, epoch: int, data: dict):
-        pass
+    def write(self, split: str, step: int, epoch: int, data: dict):
+        if split == "train":
+            self.write_train(step, epoch, data)
+
+    def end_epoch(self, mode: str, epoch: int):
+        # log epoch averaged metrics
+        container = self.logger.log_container  # type: ignore
+        self.wandb.log(
+            {f"{mode}/avg_" + metric_name: value for metric_name, value in container._avg[mode][epoch].items()},
+            step=self.current_step,
+        )
