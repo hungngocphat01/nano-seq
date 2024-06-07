@@ -16,7 +16,7 @@ Currently has a working Transformer implementation.
 ## Experiment reproducing
 
 - Task: IWSLT'14 English-Vietnamese
-- BLEU: 20.7 (greedy search)
+- BLEU (tst2012): 20.7 (greedy search)
 
 ![](assets/training_curve.png)
 
