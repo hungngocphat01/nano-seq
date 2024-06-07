@@ -1,6 +1,5 @@
 A minimal text sequence modeling library. Aims to create a neural machine translation model from scratch.  
-Currently has a working Transformer implementation and a simple sentence classification trainer.  
-Other details TBA.
+Currently has a working Transformer implementation.
 
 - [x] Transformer implementation
 - [x] Raw text data loading/collating logic
@@ -13,3 +12,12 @@ Other details TBA.
 - [ ] NMT++
   - [ ] Memory optimization (lazy-loading dataset)
   - [ ] KV caching
+
+## Experiment reproducing
+
+- Task: IWSLT'14 English-Vietnamese
+- BLEU: 20.7 (greedy search)
+
+![](assets/training_curve.png)
+
+Details TBA, when beam search implementation is complete.
