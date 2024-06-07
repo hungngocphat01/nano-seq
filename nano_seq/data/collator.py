@@ -58,6 +58,23 @@ def collate_batch(
 
 
 def _build_batches(num_tokens: list[DataSample], batch_size: int) -> list[BatchItem]:
+    """
+    Greedily construct batches. It is advised to sort the dataset by sequence length before batching.
+    This function loop over sequences, making a new batch whenever the total number of tokens in the current
+    batch exceeds `batch_size`.
+
+    Args
+    ----
+    num_tokens: list[DataSample]
+        list of sequence length entries
+    batch_size: int
+        maximum number of tokens allowed in one batch
+
+    Return
+    ------
+    list[BatchItem]
+        each element contains the starting index of the batch and skip number
+    """
     batches = []
 
     current_num_sents = 0
@@ -87,6 +104,24 @@ def _build_batches(num_tokens: list[DataSample], batch_size: int) -> list[BatchI
 
 class BaseCollator(Iterable):
     def __init__(self, dataset, batch_size: int):
+        """
+        Wraps a dataset, perform batching, and pad all sequences in one batch to the same size
+
+        Args
+        ----
+        dataset:
+            the underlying data to be wrapped
+        batch_size: int
+            maximum number of source tokens allowed in one batch
+
+        Notes
+        -----
+        Batches are constructed once when the collator is initialized, using a greedy algorithm as
+        described in `nano_seq.data.collator._build_batches`.
+
+        Shuffling the dataset shuffles the order of the batches. The ordering of data samples inside one
+        batch is kept intact.
+        """
         self.dataset = dataset
         # number of source tokens per batch
         self.bsz = batch_size
@@ -97,6 +132,10 @@ class BaseCollator(Iterable):
         self.batch_mapping_iter = None
 
     def shuffle(self):
+        """
+        Shuffle the ordering of batches of this collator.
+        Ordering of items in one batch are kept intact.
+        """
         random.shuffle(self.batch_mappings)
 
     def _count_num_tokens(self, dataset):
