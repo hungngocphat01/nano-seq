@@ -1,5 +1,7 @@
+import argparse
 import os
 from dataclasses import dataclass, field
+from typing import Any
 
 import torch
 from torch.nn.modules import Module
@@ -11,7 +13,7 @@ from nano_seq.data.dataset import LanguagePairDataset
 from nano_seq.data.utils import get_decoder_mask, get_padding_mask
 from nano_seq.model.translation import TranslationModel, TranslationNetInput
 from nano_seq.task.base import BaseTask
-from nano_seq.utils.search import iterative_greedy_single
+from nano_seq.utils.search import batched_greedy
 
 
 @dataclass
@@ -140,16 +142,13 @@ class TranslationTask(BaseTask):
 
         return {"loss": loss.item()}
 
-    def decode(self, model: TranslationModel, tgt_dict: Dictionary, batch):
-        results = []
-
+    def decode(self, model: TranslationModel, tgt_dict: Dictionary, batch: Any) -> list[str]:
+        model = model.eval()
         net_input = self.get_net_input(batch)
-        h_encoder = model.encoder(**net_input.asdict())
 
-        for j in range(len(h_encoder)):
-            out_sent = iterative_greedy_single(
-                model, h_encoder[j, :].unsqueeze(0), net_input.enc_mask[j, :].unsqueeze(0), tgt_dict
-            )
-            results.append(out_sent)
+        with torch.no_grad():
+            h_encoder = model.encoder(net_input.x, net_input.enc_mask)
 
-        return results
+        enc_mask = net_input.enc_mask
+        out_tensor = batched_greedy(model, h_encoder, enc_mask, tgt_dict)
+        return tgt_dict.decode_batch(out_tensor.cpu().numpy())

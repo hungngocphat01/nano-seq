@@ -1,3 +1,4 @@
+import numpy as np
 from tqdm import tqdm
 from .const import PAD, SOS, EOS, UNK
 
@@ -84,6 +85,33 @@ class Dictionary:
 
         d.initialize(tok2id)
         return d
+
+    def decode_batch(self, output_tensor: np.ndarray, truncate_first=True) -> list[str]:
+        """
+        Decode the final output of the decoder to human-readable text.
+        Note that sub-word tokens must be joined manually afterwards.
+
+        Args
+        ----
+        output_tensor: np.ndarray
+            with rows being samples, column being token indices
+        truncate_first: bool
+            whether to truncate the first token or not.
+            should be set to True when called on decoder's output to remove
+            start-of-sentence signal.
+        """
+        output_sents = []
+
+        for i, sample in enumerate(output_tensor):
+            if truncate_first:
+                sample = output_tensor[i, 1:].tolist()
+            else:
+                sample = output_tensor[i].tolist()
+
+            sample = sample[:sample.index(self.eos)]
+            output_sents.append(" ".join(self.decode(sample)))
+
+        return output_sents
 
 __all__ = [
     "Dictionary"
