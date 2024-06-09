@@ -37,6 +37,9 @@ def main(args):
         train_cfg = assign_default_params(config_dict["training"])
         cfg = TranslationConfig(**config_dict["task"])
 
+    if torch.cuda.is_available():
+        torch.set_default_device("cuda")
+
     # Create task, load data and model
     task = TranslationTask(cfg)
     train_iter, eval_iter, model = task.prepare()
