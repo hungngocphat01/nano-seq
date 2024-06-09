@@ -80,3 +80,6 @@ if __name__ == "__main__":
     parser.add_argument("--config", "-c", type=str, help="YAML config file")
     parser.add_argument("--chkpt-path", type=str, help="Directory to save the checkpoint", required=True)
     parser.add_argument("--chkpt-load", type=str, help="Checkpoint to continue training from", required=False)
+
+    args = parser.parse_args()
+    main(args)
