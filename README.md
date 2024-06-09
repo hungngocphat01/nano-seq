@@ -4,7 +4,7 @@
 
 This repository serves as my reference implement of the Transformer architecture, and supplementary things to make up a fully working neural machine translation model.
 
-The structure of this repository is inspired by [fairseq](https://github.com/facebookresearch/fairseq) (heck, even the name), which I had an opportunity working with while playing around with experimental NMT architectures for my undergraduate thesis. Reimplementing the NMT model from scratch is an excellent way to know more about the intricacies of implementation details, that cannot be fully understood just by reading the paper alone.
+The structure of this repository is inspired by [fairseq](https://github.com/facebookresearch/fairseq) (heck, even the name), which I had an opportunity working with while playing around with experimental NMT architectures for my undergraduate thesis. Reimplementing the NMT model from scratch is an excellent way to delve into the intricacies of implementation details that cannot be fully grasped by reading the paper alone. I personally also had a few "naruhodo" momments during the implementation process.
 
 **Quick project navigation:**
 - [Transformer implementation](nano_seq/module/transformer.py)
@@ -100,5 +100,7 @@ A reference IWSLT'14 English-Vietnamese dataset (tokenized and truncated) is inc
 Training CLI
 
 ![](assets/training.png)
+
+Metrics logged to WandB
 
 ![](assets/wandb.png)
