@@ -6,6 +6,8 @@ This repository serves as my reference implement of the Transformer architecture
 
 The structure of this repository is inspired by [fairseq](https://github.com/facebookresearch/fairseq) (heck, even the name), which I had an opportunity working with while playing around with experimental NMT architectures for my undergraduate thesis. Reimplementing the NMT model from scratch is an excellent way to delve into the intricacies of implementation details that cannot be fully grasped by reading the paper alone. I personally also had a few "naruhodo" momments during the implementation process.
 
+The Transformer architecture itself is quite intuitive. However, implementing an NMT system from scratch is challenging due to the extensive "extra" work required for writing additional modules for data loading, batching, converting, and decoding. Organizing these components effectively also demands a certain level of codebase management experience. At the end of the day, the true complexity lies in the supporting infrastructure rather than the core model itself. Not to mention if I were to deploy this little sh*t into production. Oh my.
+
 **Quick project navigation:**
 - [Transformer implementation](nano_seq/module/transformer.py)
 - [Translation-related logics](nano_seq/task/translation.py)
