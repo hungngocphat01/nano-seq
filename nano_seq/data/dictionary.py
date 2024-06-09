@@ -69,7 +69,7 @@ class Dictionary:
         d = cls(pad_idx, sos_id, eos_id, unk_id)
 
         # number of reserved tokens
-        offset = max(d._id2tok.keys())
+        offset = max(d._id2tok.keys()) + 1
 
         tok2id = {}
         with open(spm_dict_path, "rt", encoding="utf-8") as f:
