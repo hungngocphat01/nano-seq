@@ -1,0 +1,26 @@
+task:
+  embed_dims: 512
+  num_heads: 8
+  ffn_project_dims: 2048
+  encoder_layers: 6
+  decoder_layers: 6
+  encoder_dropout: 0.1
+  decoder_dropout: 0.1
+  train_path: "data/train"
+  valid_path: "data/valid"
+  dict_path: "data"
+  shared_dict: true
+  shared_embedding: true
+  src_lang: "en"
+  tgt_lang: "vi"
+  batch_size: 128
+
+training:
+  adam_betas: [0.9, 0.98]
+  adam_eps: 1e-9
+  lr_multiplier: 1
+  warm_up_steps: 12000
+  label_smoothing: 0.1
+  chkpt_save_every: 1
+  chkpt_keep_last: null
+  wandb_project: null

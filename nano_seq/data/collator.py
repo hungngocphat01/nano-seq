@@ -231,8 +231,7 @@ class LanguagePairCollator(BaseCollator):
 
             All padded so that every sequence has the same length.
         """
-        x = [sample[0] for sample in batch]
-        y = [sample[1] for sample in batch]
+        x, y = batch
 
         batched_x = torch.tensor(
             collate_batch(x, eos=self.src.eos, sos=self.src.sos, pad=self.src.pad, padding=self.src.padding)

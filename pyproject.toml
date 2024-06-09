@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nano-seq"
-version = "0.1.0"
+version = "1.0"
 description = ""
 authors = ["Hung Ngoc Phat <hungngocphat01@gmail.com>"]
 readme = "README.md"

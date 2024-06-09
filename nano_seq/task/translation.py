@@ -1,4 +1,3 @@
-import argparse
 import os
 from dataclasses import dataclass, field
 from typing import Any
@@ -58,13 +57,6 @@ def load_langpair_dictionary(dict_path: str, src_lang: str, tgt_lang: str, share
     return shared_dict, shared_dict
 
 
-def load_langpair_dataset(src_lang: str, tgt_lang: str, src_dict: Dictionary, tgt_dict: Dictionary, prefix: str):
-    src_path = os.path.join(prefix, f"{src_lang}.txt")
-    tgt_path = os.path.join(prefix, f"{tgt_lang}.txt")
-
-    return LanguagePairDataset.from_text_file(src_path, tgt_path, src_dict, tgt_dict)
-
-
 class TranslationTask(BaseTask):
     def __init__(self, cfg: TranslationConfig):
         self.cfg = cfg
@@ -90,7 +82,7 @@ class TranslationTask(BaseTask):
         cfg = self.cfg
 
         def load_collator_split(prefix: str):
-            dataset = load_langpair_dataset(cfg.src_lang, cfg.tgt_lang, src_dict, tgt_dict, prefix)
+            dataset = LanguagePairDataset.from_text_file(prefix, cfg.src_lang, cfg.tgt_lang, src_dict, tgt_dict, True)
             return LanguagePairCollator(
                 dataset, cfg.batch_size, get_padding_str(cfg.left_pad_src), get_padding_str(cfg.left_pad_tgt)
             )
